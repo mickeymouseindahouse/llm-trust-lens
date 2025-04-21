@@ -3,8 +3,9 @@ from llm_trust_lens import HuggingFaceEmbeddingModel, TrustEvaluator
 def main():
     model = HuggingFaceEmbeddingModel(
         model_name="bert-base-uncased",
-        dataset_name="imdb",
-        text_column="text"
+        dataset_name="uclanlp/wino_bias",
+        dataset_config="type1_anti",
+        text_column="tokens"
     )
     
     evaluator = TrustEvaluator(model)

@@ -28,12 +28,17 @@ class BiasEvaluator:
             target2_emb = np.array([self.model.get_embedding(word) for word in target2])
             
             # Get embeddings for attribute words
+
+            # engineer
             attr_emb = np.array([self.model.get_embedding(word) for word in attribute_words])
             
             # Calculate mean embeddings
             target1_mean = np.mean(target1_emb, axis=0)
             target2_mean = np.mean(target2_emb, axis=0)
             attr_mean = np.mean(attr_emb, axis=0)
+
+            # he, man -- she, woman
+            #
             
             # Calculate cosine similarities
             target1_sim = np.dot(target1_mean, attr_mean) / (np.linalg.norm(target1_mean) * np.linalg.norm(attr_mean))

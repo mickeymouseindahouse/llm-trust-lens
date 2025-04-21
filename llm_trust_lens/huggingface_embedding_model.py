@@ -10,8 +10,9 @@ class HuggingFaceEmbeddingModel(EmbeddingModelInterface):
     def __init__(
         self,
         model_name: str = "bert-base-uncased",
-        dataset_name: str = "imdb",
-        text_column: str = "text",
+        dataset_name: str = "uclanlp/wino_bias",
+        dataset_config: str = "type1_anti",
+        text_column: str = "tokens",
         max_length: int = 512,
         device: Optional[str] = None
     ):
@@ -21,12 +22,14 @@ class HuggingFaceEmbeddingModel(EmbeddingModelInterface):
         Args:
             model_name: Name of the Hugging Face model to use
             dataset_name: Name of the Hugging Face dataset to load
+            dataset_config: Configuration name for the dataset
             text_column: Name of the column containing text in the dataset
             max_length: Maximum sequence length for tokenization
             device: Device to run the model on (cuda/cpu)
         """
         self.model_name = model_name
         self.dataset_name = dataset_name
+        self.dataset_config = dataset_config
         self.text_column = text_column
         self.max_length = max_length
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -37,8 +40,13 @@ class HuggingFaceEmbeddingModel(EmbeddingModelInterface):
         self.model.eval()
         
         # Load dataset
-        self.dataset = load_dataset(dataset_name, split="train")
-        self.texts = self.dataset[text_column]
+        self.dataset = load_dataset(dataset_name, dataset_config, split="validation")
+        
+        # For WinoBias dataset, tokens are lists, so we need to join them
+        if text_column == "tokens" and isinstance(self.dataset[0][text_column], list):
+            self.texts = [" ".join(item[text_column]) for item in self.dataset]
+        else:
+            self.texts = self.dataset[text_column]
         
     def get_embedding(self, text: str) -> List[float]:
         """
@@ -62,8 +70,17 @@ class HuggingFaceEmbeddingModel(EmbeddingModelInterface):
             
             # Get model output
             outputs = self.model(**inputs)
+
+            # model.modules -- get the last layer before classifier
+            # model.classifier <= last layer
+            # model.classifier.requires_grad(True) -- just unfreeze the classifier
             
             # Use the [CLS] token embedding or mean pooling
+            # check how to retrieve BERT's last state
+            # use BERT embedding as proposed by HF
+            # Action Item: check bert embs on HF
+            # last layer before classifier
+            # !!!!!!! ollama !!!!!!!!!
             if hasattr(outputs, "last_hidden_state"):
                 embedding = outputs.last_hidden_state[:, 0, :].squeeze().cpu().numpy()
             else:
